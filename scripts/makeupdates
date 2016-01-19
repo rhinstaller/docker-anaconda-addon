@@ -1,0 +1,5 @@
+#!/bin/bash
+rm -rf ./updates/
+mkdir -p ./updates/usr/share/anaconda/addons
+cp -r ./com_redhat_docker ./updates/usr/share/anaconda/addons/
+( cd updates; find . | cpio -oc | gzip -c9 ) > updates.img
