@@ -18,18 +18,10 @@
 #
 # Red Hat Author(s): Brian C. Lane <bcl@redhat.com>
 #
-
-# TODO
-# - Sanity check storage, make sure there is a VG defined and it had a thinpool named docker-pool
-# - Run after installation is complete, like %post --nochroot
-# - bind mount /var/lib/docker to /mnt/sysimage/var/lib/docker
-# - Start docker service, wait for it to finish startup
-# - Execute commands inside addon in a nochroot bash session
-# - Kill docker service when finished
-# - Copy configuration files from /etc/docker* to /mnt/sysimage/docker*
 import os
 import shutil
 import blivet.formats
+
 from pyanaconda.addons import AddonData
 from pyanaconda.iutil import execWithRedirect, getSysroot
 from pyanaconda.iutil import startProgram
@@ -38,16 +30,21 @@ from pyanaconda.kickstart import AnacondaKSScript
 from pykickstart.options import KSOptionParser
 from pykickstart.errors import KickstartValueError, formatErrorMsg
 
+from com_redhat_docker.i18n import _
+
 import logging
 log = logging.getLogger("anaconda")
 
 __all__ = ["DockerData"]
 
+# pylint: disable=interruptible-system-call
+
 class DockerData(AddonData):
     """Addon data for the docker configuration"""
 
     def __init__(self, name):
-        log.info("docker addon __init__ called")
+        """ :param str name: Addon name """
+        log.info("Initializing docker addon")
         # Called very early in anaconda setup
         AddonData.__init__(self, name)
         self.vgname = "docker"
@@ -60,32 +57,39 @@ class DockerData(AddonData):
             return ""
 
         addon_str = '%%addon %s --vgname="%s" --fstype="%s"' % (self.name, self.vgname, self.fstype)
+        if self.extra_args:
+            addon_str += " -- %s" % " ".join(self.extra_args)
         addon_str += "\n%s\n%%end\n" % self.content.strip()
 
         return addon_str
 
     def setup(self, storage, ksdata, instClass):
-        log.info("docker addon setup called")
+        """ Setup the addon
 
-        # When does this get called? After entering progress hub, just before installation, and
-        # before device partitioning.
+        :param storage: Blivet storage object
+        :param ksdata: Kickstart data object
+        :param instClass: Anaconda installclass object
+        """
+        # This gets called after entering progress hub, just before installation and device partitioning.
 
         if "docker" not in ksdata.packages.packageList:
-            raise KickstartValueError(formatErrorMsg(0, msg="%%package section is missing docker"))
+            raise KickstartValueError(formatErrorMsg(0, msg=_("%%package section is missing docker")))
 
         # Check storage to make sure the selected VG has a thinpool and it is named docker-pool?
         if self.vgname not in (vg.name for vg in storage.vgs):
-            raise KickstartValueError(formatErrorMsg(0, msg="%%addon com_redhat_docker is missing VG named %s") % self.vgname)
+            raise KickstartValueError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker is missing VG named %s")) % self.vgname)
 
         # Make sure the VG has a docker-pool LV
         if self.vgname+"-docker-pool" not in (lv.name for lv in storage.lvs):
-            raise KickstartValueError(formatErrorMsg(0, msg="%%addon com_redhat_docker is missing a LV named docker-pool"))
+            raise KickstartValueError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker is missing a LV named docker-pool")))
 
     def handle_header(self, lineno, args):
-        log.info("docker addon handle_header called")
-        # When does this get called? Right after __init__, very early in the installation.
-        # Check storage to make sure the selected VG has a thinpool and it is named docker-pool?
+        """ Handle the kickstart addon header
 
+        :param lineno: Line number
+        :param args: arguments from %addon line
+        """
+        # This gets called after __init__, very early in the installation.
         op = KSOptionParser()
         op.add_option("--vgname", required=True,
                       help="Name of the VG that contains a thinpool named docker-pool")
@@ -93,12 +97,10 @@ class DockerData(AddonData):
                       help="Type of filesystem to use for docker to use with docker-pool")
         (opts, extra) = op.parse_args(args=args, lineno=lineno)
 
-        log.info("extra args looks like '%s'", extra)
-
         fmt = blivet.formats.getFormat(opts.fstype)
         if not fmt or fmt.type is None:
             raise KickstartValueError(formatErrorMsg(lineno,
-                                      msg="%%addon com_redhat_docker fstype of %s is invalid.") % opts.fstype)
+                                      msg=_("%%addon com_redhat_docker fstype of %s is invalid.")) % opts.fstype)
 
         self.vgname = opts.vgname
         self.fstype = opts.fstype
@@ -106,16 +108,20 @@ class DockerData(AddonData):
         self.extra_args = extra
 
     def execute(self, storage, ksdata, instClass, users):
-        log.info("Executing docker addon")
-        # When does this get called? After installation, before initramfs regeneration and
-        # before kickstart %post scripts are run.
+        """ Execute the addon
 
-        # Called from post-install setup phase
+        :param storage: Blivet storage object
+        :param ksdata: Kickstart data object
+        :param instClass: Anaconda installclass object
+        :param users: Anaconda users object
+        """
+        log.info("Executing docker addon")
+        # This gets called after installation, before initramfs regeneration and kickstart %post scripts.
         execWithRedirect("mount", ["-o", "bind", getSysroot()+"/var/lib/docker", "/var/lib/docker"])
         execWithRedirect("mount", ["-o", "bind", getSysroot()+"/etc/docker", "/etc/docker"])
 
         # Start up the docker daemon
-        log.info("Starting docker daemon")
+        log.debug("Starting docker daemon")
         dm_fs = "dm.fs=%s" % self.fstype
         pool_name = "dm.thinpooldev=/dev/mapper/%s-docker--pool" % self.vgname
         docker_cmd = ["docker", "daemon"]
@@ -127,17 +133,15 @@ class DockerData(AddonData):
         docker_cmd += self.extra_args
         docker_proc = startProgram(docker_cmd, stdout=open("/tmp/docker-daemon.log", "w"), reset_lang=True)
 
-        # Write the content out to a bash script and execute it
-        # Write output to /tmp/docker-addon.log
-        log.info("Running docker commands")
+        log.debug("Running docker commands")
         script = AnacondaKSScript(self.content, inChroot=False, logfile="/tmp/docker-addon.log")
         script.run("/")
 
         # Kill the docker process
-        log.info("Shutting down docker daemon")
+        log.debug("Shutting down docker daemon")
         docker_proc.kill()
 
-        log.debug("Writing docker config")
+        log.debug("Writing docker configs")
         with open(getSysroot()+"/etc/sysconfig/docker-storage", "w") as fp:
             fp.write('DOCKER_STORAGE_OPTIONS="--storage-driver devicemapper '
                      '--storage-opt %s --storage-opt %s"\n' % (dm_fs, pool_name))
