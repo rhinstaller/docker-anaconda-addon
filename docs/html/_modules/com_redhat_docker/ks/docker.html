@@ -1,0 +1,363 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>com_redhat_docker.ks.docker &mdash; Docker Anaconda Addon 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="Docker Anaconda Addon 0.1 documentation" href="../../../index.html"/>
+        <link rel="up" title="Module code" href="../../index.html"/> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Docker Anaconda Addon
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../docker-anaconda-addon.html">Docker Anaconda addon</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">com_redhat_docker</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../../index.html">Docker Anaconda Addon</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      
+    <li>com_redhat_docker.ks.docker</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for com_redhat_docker.ks.docker</h1><div class="highlight"><pre>
+<span class="c"># Docker Anaconda Kickstart Addon</span>
+<span class="c">#</span>
+<span class="c"># Copyright (C) 2016 Red Hat, Inc.</span>
+<span class="c">#</span>
+<span class="c"># This copyrighted material is made available to anyone wishing to use,</span>
+<span class="c"># modify, copy, or redistribute it subject to the terms and conditions of</span>
+<span class="c"># the GNU General Public License v.2, or (at your option) any later version.</span>
+<span class="c"># This program is distributed in the hope that it will be useful, but WITHOUT</span>
+<span class="c"># ANY WARRANTY expressed or implied, including the implied warranties of</span>
+<span class="c"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General</span>
+<span class="c"># Public License for more details.  You should have received a copy of the</span>
+<span class="c"># GNU General Public License along with this program; if not, write to the</span>
+<span class="c"># Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA</span>
+<span class="c"># 02110-1301, USA.  Any Red Hat trademarks that are incorporated in the</span>
+<span class="c"># source code or documentation are not subject to the GNU General Public</span>
+<span class="c"># License and may only be used or replicated with the express permission of</span>
+<span class="c"># Red Hat, Inc.</span>
+<span class="c">#</span>
+<span class="c"># Red Hat Author(s): Brian C. Lane &lt;bcl@redhat.com&gt;</span>
+<span class="c">#</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">blivet.formats</span>
+
+<span class="kn">from</span> <span class="nn">pyanaconda.addons</span> <span class="kn">import</span> <span class="n">AddonData</span>
+<span class="kn">from</span> <span class="nn">pyanaconda.iutil</span> <span class="kn">import</span> <span class="n">execWithRedirect</span><span class="p">,</span> <span class="n">getSysroot</span>
+<span class="kn">from</span> <span class="nn">pyanaconda.iutil</span> <span class="kn">import</span> <span class="n">startProgram</span>
+<span class="kn">from</span> <span class="nn">pyanaconda.kickstart</span> <span class="kn">import</span> <span class="n">AnacondaKSScript</span>
+<span class="kn">from</span> <span class="nn">pyanaconda.simpleconfig</span> <span class="kn">import</span> <span class="n">SimpleConfigFile</span>
+
+<span class="kn">from</span> <span class="nn">pykickstart.options</span> <span class="kn">import</span> <span class="n">KSOptionParser</span>
+<span class="kn">from</span> <span class="nn">pykickstart.errors</span> <span class="kn">import</span> <span class="n">KickstartValueError</span><span class="p">,</span> <span class="n">formatErrorMsg</span>
+
+<span class="kn">from</span> <span class="nn">com_redhat_docker.i18n</span> <span class="kn">import</span> <span class="n">_</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;anaconda&quot;</span><span class="p">)</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;DockerData&quot;</span><span class="p">]</span>
+
+<span class="c"># pylint: disable=interruptible-system-call</span>
+
+<div class="viewcode-block" id="DockerData"><a class="viewcode-back" href="../../../com_redhat_docker.ks.html#com_redhat_docker.ks.docker.DockerData">[docs]</a><span class="k">class</span> <span class="nc">DockerData</span><span class="p">(</span><span class="n">AddonData</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Addon data for the docker configuration&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; :param str name: Addon name &quot;&quot;&quot;</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Initializing docker addon&quot;</span><span class="p">)</span>
+        <span class="c"># Called very early in anaconda setup</span>
+        <span class="n">AddonData</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vgname</span> <span class="o">=</span> <span class="s">&quot;docker&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fstype</span> <span class="o">=</span> <span class="s">&quot;xfs&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extra_args</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_args</span> <span class="o">=</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&quot;&quot;</span>
+
+        <span class="n">addon_str</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%%</span><span class="s">addon </span><span class="si">%s</span><span class="s"> --vgname=&quot;</span><span class="si">%s</span><span class="s">&quot; --fstype=&quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vgname</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fstype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">extra_args</span><span class="p">:</span>
+            <span class="n">addon_str</span> <span class="o">+=</span> <span class="s">&quot; -- </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extra_args</span><span class="p">)</span>
+        <span class="n">addon_str</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="si">%%</span><span class="s">end</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">addon_str</span>
+
+<div class="viewcode-block" id="DockerData.setup"><a class="viewcode-back" href="../../../com_redhat_docker.ks.html#com_redhat_docker.ks.docker.DockerData.setup">[docs]</a>    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">storage</span><span class="p">,</span> <span class="n">ksdata</span><span class="p">,</span> <span class="n">instClass</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Setup the addon</span>
+
+<span class="sd">        :param storage: Blivet storage object</span>
+<span class="sd">        :param ksdata: Kickstart data object</span>
+<span class="sd">        :param instClass: Anaconda installclass object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># This gets called after entering progress hub, just before installation and device partitioning.</span>
+
+        <span class="k">if</span> <span class="s">&quot;docker&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ksdata</span><span class="o">.</span><span class="n">packages</span><span class="o">.</span><span class="n">packageList</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">KickstartValueError</span><span class="p">(</span><span class="n">formatErrorMsg</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">_</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%%</span><span class="s">package section is missing docker&quot;</span><span class="p">)))</span>
+
+        <span class="c"># Check storage to make sure the selected VG has a thinpool and it is named docker-pool?</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">vgname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">vg</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">vg</span> <span class="ow">in</span> <span class="n">storage</span><span class="o">.</span><span class="n">vgs</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">KickstartValueError</span><span class="p">(</span><span class="n">formatErrorMsg</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">_</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%%</span><span class="s">addon com_redhat_docker is missing VG named </span><span class="si">%s</span><span class="s">&quot;</span><span class="p">))</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">vgname</span><span class="p">)</span>
+
+        <span class="c"># Make sure the VG has a docker-pool LV</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">vgname</span><span class="o">+</span><span class="s">&quot;-docker-pool&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">lv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">lv</span> <span class="ow">in</span> <span class="n">storage</span><span class="o">.</span><span class="n">lvs</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">KickstartValueError</span><span class="p">(</span><span class="n">formatErrorMsg</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">_</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%%</span><span class="s">addon com_redhat_docker is missing a LV named docker-pool&quot;</span><span class="p">)))</span>
+</div>
+<div class="viewcode-block" id="DockerData.handle_header"><a class="viewcode-back" href="../../../com_redhat_docker.ks.html#com_redhat_docker.ks.docker.DockerData.handle_header">[docs]</a>    <span class="k">def</span> <span class="nf">handle_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lineno</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Handle the kickstart addon header</span>
+
+<span class="sd">        :param lineno: Line number</span>
+<span class="sd">        :param args: arguments from %addon line</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># This gets called after __init__, very early in the installation.</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">KSOptionParser</span><span class="p">()</span>
+        <span class="n">op</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s">&quot;--vgname&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                      <span class="n">help</span><span class="o">=</span><span class="s">&quot;Name of the VG that contains a thinpool named docker-pool&quot;</span><span class="p">)</span>
+        <span class="n">op</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s">&quot;--fstype&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                      <span class="n">help</span><span class="o">=</span><span class="s">&quot;Type of filesystem to use for docker to use with docker-pool&quot;</span><span class="p">)</span>
+        <span class="n">op</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s">&quot;--save-args&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                      <span class="n">help</span><span class="o">=</span><span class="s">&quot;Save all extra args to the OPTIONS variable in /etc/sysconfig/docker&quot;</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="n">extra</span><span class="p">)</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">,</span> <span class="n">lineno</span><span class="o">=</span><span class="n">lineno</span><span class="p">)</span>
+
+        <span class="n">fmt</span> <span class="o">=</span> <span class="n">blivet</span><span class="o">.</span><span class="n">formats</span><span class="o">.</span><span class="n">getFormat</span><span class="p">(</span><span class="n">opts</span><span class="o">.</span><span class="n">fstype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">fmt</span> <span class="ow">or</span> <span class="n">fmt</span><span class="o">.</span><span class="n">type</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">KickstartValueError</span><span class="p">(</span><span class="n">formatErrorMsg</span><span class="p">(</span><span class="n">lineno</span><span class="p">,</span>
+                                      <span class="n">msg</span><span class="o">=</span><span class="n">_</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%%</span><span class="s">addon com_redhat_docker fstype of </span><span class="si">%s</span><span class="s"> is invalid.&quot;</span><span class="p">))</span> <span class="o">%</span> <span class="n">opts</span><span class="o">.</span><span class="n">fstype</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">vgname</span> <span class="o">=</span> <span class="n">opts</span><span class="o">.</span><span class="n">vgname</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fstype</span> <span class="o">=</span> <span class="n">opts</span><span class="o">.</span><span class="n">fstype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extra_args</span> <span class="o">=</span> <span class="n">extra</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_args</span> <span class="o">=</span> <span class="n">opts</span><span class="o">.</span><span class="n">save_args</span>
+</div>
+<div class="viewcode-block" id="DockerData.execute"><a class="viewcode-back" href="../../../com_redhat_docker.ks.html#com_redhat_docker.ks.docker.DockerData.execute">[docs]</a>    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">storage</span><span class="p">,</span> <span class="n">ksdata</span><span class="p">,</span> <span class="n">instClass</span><span class="p">,</span> <span class="n">users</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Execute the addon</span>
+
+<span class="sd">        :param storage: Blivet storage object</span>
+<span class="sd">        :param ksdata: Kickstart data object</span>
+<span class="sd">        :param instClass: Anaconda installclass object</span>
+<span class="sd">        :param users: Anaconda users object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Executing docker addon&quot;</span><span class="p">)</span>
+        <span class="c"># This gets called after installation, before initramfs regeneration and kickstart %post scripts.</span>
+        <span class="n">execWithRedirect</span><span class="p">(</span><span class="s">&quot;mount&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s">&quot;-o&quot;</span><span class="p">,</span> <span class="s">&quot;bind&quot;</span><span class="p">,</span> <span class="n">getSysroot</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;/var/lib/docker&quot;</span><span class="p">,</span> <span class="s">&quot;/var/lib/docker&quot;</span><span class="p">])</span>
+        <span class="n">execWithRedirect</span><span class="p">(</span><span class="s">&quot;mount&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s">&quot;-o&quot;</span><span class="p">,</span> <span class="s">&quot;bind&quot;</span><span class="p">,</span> <span class="n">getSysroot</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;/etc/docker&quot;</span><span class="p">,</span> <span class="s">&quot;/etc/docker&quot;</span><span class="p">])</span>
+
+        <span class="c"># Start up the docker daemon</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Starting docker daemon&quot;</span><span class="p">)</span>
+        <span class="n">dm_fs</span> <span class="o">=</span> <span class="s">&quot;dm.fs=</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">fstype</span>
+        <span class="n">pool_name</span> <span class="o">=</span> <span class="s">&quot;dm.thinpooldev=/dev/mapper/</span><span class="si">%s</span><span class="s">-docker--pool&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">vgname</span>
+        <span class="n">docker_cmd</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;docker&quot;</span><span class="p">,</span> <span class="s">&quot;daemon&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">ksdata</span><span class="o">.</span><span class="n">selinux</span><span class="o">.</span><span class="n">selinux</span><span class="p">:</span>
+            <span class="n">docker_cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s">&quot;--selinux-enabled&quot;</span><span class="p">]</span>
+        <span class="n">docker_cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s">&quot;--storage-driver&quot;</span><span class="p">,</span> <span class="s">&quot;devicemapper&quot;</span><span class="p">,</span>
+                      <span class="s">&quot;--storage-opt&quot;</span><span class="p">,</span> <span class="n">dm_fs</span><span class="p">,</span>
+                      <span class="s">&quot;--storage-opt&quot;</span><span class="p">,</span> <span class="n">pool_name</span><span class="p">,</span> <span class="s">&quot;--ip-forward=false&quot;</span><span class="p">,</span> <span class="s">&quot;--iptables=false&quot;</span><span class="p">]</span>
+        <span class="n">docker_cmd</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extra_args</span>
+        <span class="n">docker_proc</span> <span class="o">=</span> <span class="n">startProgram</span><span class="p">(</span><span class="n">docker_cmd</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s">&quot;/tmp/docker-daemon.log&quot;</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">),</span> <span class="n">reset_lang</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Running docker commands&quot;</span><span class="p">)</span>
+        <span class="n">script</span> <span class="o">=</span> <span class="n">AnacondaKSScript</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">,</span> <span class="n">inChroot</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">logfile</span><span class="o">=</span><span class="s">&quot;/tmp/docker-addon.log&quot;</span><span class="p">)</span>
+        <span class="n">script</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">)</span>
+
+        <span class="c"># Kill the docker process</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Shutting down docker daemon&quot;</span><span class="p">)</span>
+        <span class="n">docker_proc</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Writing docker configs&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">getSysroot</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;/etc/sysconfig/docker-storage&quot;</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+            <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;DOCKER_STORAGE_OPTIONS=&quot;--storage-driver devicemapper &#39;</span>
+                     <span class="s">&#39;--storage-opt </span><span class="si">%s</span><span class="s"> --storage-opt </span><span class="si">%s</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dm_fs</span><span class="p">,</span> <span class="n">pool_name</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">getSysroot</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;/etc/sysconfig/docker-storage-setup&quot;</span><span class="p">,</span> <span class="s">&quot;a&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+            <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;VG=</span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">vgname</span><span class="p">)</span>
+
+        <span class="c"># Rewrite the OPTIONS entry with the extra args, if requested.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">extra_args</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">save_args</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">docker_cfg</span> <span class="o">=</span> <span class="n">SimpleConfigFile</span><span class="p">(</span><span class="n">getSysroot</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;/etc/sysconfig/docker&quot;</span><span class="p">)</span>
+                <span class="n">docker_cfg</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                <span class="n">options</span> <span class="o">=</span> <span class="n">docker_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;OPTIONS&quot;</span><span class="p">)</span><span class="o">+</span><span class="s">&quot; &quot;</span> <span class="o">+</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extra_args</span><span class="p">)</span>
+                <span class="n">docker_cfg</span><span class="o">.</span><span class="n">set</span><span class="p">((</span><span class="s">&quot;OPTIONS&quot;</span><span class="p">,</span> <span class="n">options</span><span class="p">))</span>
+                <span class="n">docker_cfg</span><span class="o">.</span><span class="n">write</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">IOError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;Error updating OPTIONS in /etc/sysconfig/docker: </span><span class="si">%s</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+
+        <span class="c"># Copy the log files to the system</span>
+        <span class="n">dstdir</span> <span class="o">=</span> <span class="s">&quot;/var/log/anaconda/&quot;</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">dstdir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;docker-daemon.log&quot;</span><span class="p">,</span> <span class="s">&quot;docker-addon.log&quot;</span><span class="p">]:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copy2</span><span class="p">(</span><span class="s">&quot;/tmp/&quot;</span><span class="o">+</span><span class="n">l</span><span class="p">,</span> <span class="n">dstdir</span><span class="o">+</span><span class="n">l</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Red Hat, Inc..
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
