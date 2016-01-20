@@ -60,6 +60,11 @@ eg.::
     docker images
     %end
 
+.. NOTE::
+
+    The extra arguments are normally only used during installation. If they should
+    be used after reboot add ``--save-args`` before the ``--``.
+
 Example
 ~~~~~~~
 

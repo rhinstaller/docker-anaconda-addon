@@ -26,6 +26,7 @@ from pyanaconda.addons import AddonData
 from pyanaconda.iutil import execWithRedirect, getSysroot
 from pyanaconda.iutil import startProgram
 from pyanaconda.kickstart import AnacondaKSScript
+from pyanaconda.simpleconfig import SimpleConfigFile
 
 from pykickstart.options import KSOptionParser
 from pykickstart.errors import KickstartValueError, formatErrorMsg
@@ -51,6 +52,7 @@ class DockerData(AddonData):
         self.fstype = "xfs"
         self.enabled = False
         self.extra_args = []
+        self.save_args = False
 
     def __str__(self):
         if not self.enabled:
@@ -95,6 +97,8 @@ class DockerData(AddonData):
                       help="Name of the VG that contains a thinpool named docker-pool")
         op.add_option("--fstype", required=True,
                       help="Type of filesystem to use for docker to use with docker-pool")
+        op.add_option("--save-args", action="store_true", default=False,
+                      help="Save all extra args to the OPTIONS variable in /etc/sysconfig/docker")
         (opts, extra) = op.parse_args(args=args, lineno=lineno)
 
         fmt = blivet.formats.getFormat(opts.fstype)
@@ -106,6 +110,7 @@ class DockerData(AddonData):
         self.fstype = opts.fstype
         self.enabled = True
         self.extra_args = extra
+        self.save_args = opts.save_args
 
     def execute(self, storage, ksdata, instClass, users):
         """ Execute the addon
@@ -148,6 +153,17 @@ class DockerData(AddonData):
 
         with open(getSysroot()+"/etc/sysconfig/docker-storage-setup", "a") as fp:
             fp.write("VG=%s\n" % self.vgname)
+
+        # Rewrite the OPTIONS entry with the extra args, if requested.
+        if self.extra_args and self.save_args:
+            try:
+                docker_cfg = SimpleConfigFile(getSysroot()+"/etc/sysconfig/docker")
+                docker_cfg.read()
+                options = docker_cfg.get("OPTIONS")+" " + " ".join(self.extra_args)
+                docker_cfg.set(("OPTIONS", options))
+                docker_cfg.write()
+            except IOError as e:
+                log.error("Error updating OPTIONS in /etc/sysconfig/docker: %s", e)
 
         # Copy the log files to the system
         dstdir = "/var/log/anaconda/"
