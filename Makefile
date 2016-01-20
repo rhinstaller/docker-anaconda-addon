@@ -13,6 +13,7 @@ check:
 clean:
 	-rm pylint-log updates.img
 	-rm -rf updates
+	-rm -rf docs/html.new
 
 install:
 	mkdir -p $(DESTDIR)$(ADDONDIR)
