@@ -59,6 +59,8 @@ class DockerData(AddonData):
             return ""
 
         addon_str = '%%addon %s --vgname="%s" --fstype="%s"' % (self.name, self.vgname, self.fstype)
+        if self.save_args:
+            addon_str += " --save-args"
         if self.extra_args:
             addon_str += " -- %s" % " ".join(self.extra_args)
         addon_str += "\n%s\n%%end\n" % self.content.strip()
