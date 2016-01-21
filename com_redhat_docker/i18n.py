@@ -1,4 +1,6 @@
-# translation functions
+'''
+translation functions
+'''
 #
 # Copyright (C) 2014-2016 Red Hat, Inc.
 #
