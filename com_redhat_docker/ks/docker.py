@@ -1,4 +1,7 @@
-# Docker Anaconda Kickstart Addon
+'''
+Docker Anaconda Kickstart Addon
+'''
+#pylint: disable=line-too-long
 #
 # Copyright (C) 2016 Red Hat, Inc.
 #
@@ -106,7 +109,7 @@ class DockerData(AddonData):
         fmt = blivet.formats.getFormat(opts.fstype)
         if not fmt or fmt.type is None:
             raise KickstartValueError(formatErrorMsg(lineno,
-                                      msg=_("%%addon com_redhat_docker fstype of %s is invalid.")) % opts.fstype)
+                                                     msg=_("%%addon com_redhat_docker fstype of %s is invalid.")) % opts.fstype)
 
         self.vgname = opts.vgname
         self.fstype = opts.fstype
@@ -135,8 +138,8 @@ class DockerData(AddonData):
         if ksdata.selinux.selinux:
             docker_cmd += ["--selinux-enabled"]
         docker_cmd += ["--storage-driver", "devicemapper",
-                      "--storage-opt", dm_fs,
-                      "--storage-opt", pool_name, "--ip-forward=false", "--iptables=false"]
+                       "--storage-opt", dm_fs,
+                       "--storage-opt", pool_name, "--ip-forward=false", "--iptables=false"]
         docker_cmd += self.extra_args
         docker_proc = startProgram(docker_cmd, stdout=open("/tmp/docker-daemon.log", "w"), reset_lang=True)
 
