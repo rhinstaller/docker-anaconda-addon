@@ -43,6 +43,123 @@ __all__ = ["DockerData"]
 
 # pylint: disable=interruptible-system-call
 
+class LVMStorage(object):
+    def __init__(self, addon):
+        self.addon = addon
+
+    @property
+    def dm_fs(self):
+        """ Return the docker dm.fs value """
+        if not self.addon:
+            return ""
+        return "dm.fs=%s" % self.addon.fstype
+
+    @property
+    def pool_name(self):
+        """ Return the docker dm.thinpool value """
+        if not self.addon:
+            return ""
+        return "dm.thinpooldev=/dev/mapper/%s-docker--pool" % self.addon.vgname
+
+    @property
+    def addon_str(self):
+        """ Return the addon string and storage driver options """
+        return '%%addon %s --vgname="%s" --fstype="%s"' % (self.addon.name, self.addon.vgname, self.addon.fstype)
+
+    def check_setup(self, storage, ksdata, instClass):
+        """ Check storage to make sure the selected VG has a thinpool and it is named docker-pool
+
+        :param storage: Blivet storage object
+        :param ksdata: Kickstart data object
+        :param instClass: Anaconda installclass object
+
+        If there is an error, raise the appropriate Kickstart error.
+        """
+        if self.addon.vgname not in (vg.name for vg in storage.vgs):
+            raise KickstartValueError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker is missing VG named %s")) % self.addon.vgname)
+
+        # Make sure the VG has a docker-pool LV
+        if self.addon.vgname+"-docker-pool" not in (lv.name for lv in storage.lvs):
+            raise KickstartValueError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker is missing a LV named docker-pool")))
+
+    def docker_cmd(self, storage, ksdata, instClass, users):
+        """ Return the docker command's storage arguments
+
+        :param storage: Blivet storage object
+        :param ksdata: Kickstart data object
+        :param instClass: Anaconda installclass object
+        :param users: Anaconda users object
+        """
+        return ["--storage-driver", "devicemapper", "--storage-opt", self.dm_fs, "--storage-opt", self.pool_name]
+
+    def write_configs(self, storage, ksdata, instClass, users):
+        """ Write configuration file(s)
+
+        :param storage: Blivet storage object
+        :param ksdata: Kickstart data object
+        :param instClass: Anaconda installclass object
+        :param users: Anaconda users object
+        """
+        with open(getSysroot()+"/etc/sysconfig/docker-storage", "w") as fp:
+            fp.write('DOCKER_STORAGE_OPTIONS="--storage-driver devicemapper '
+                     '--storage-opt %s --storage-opt %s"\n' % (self.dm_fs, self.pool_name))
+
+        with open(getSysroot()+"/etc/sysconfig/docker-storage-setup", "a") as fp:
+            fp.write("VG=%s\n" % self.addon.vgname)
+
+    def options(self, options):
+        """ Modify the docker config file OPTION value
+
+        :param str options: docker config file OPTIONS string
+
+            LVM doesn't modify the value.
+        """
+        return options
+
+class OverlayStorage(object):
+    def __init__(self, addon):
+        self.addon = addon
+
+    @property
+    def addon_str(self):
+        """ Return the addon string and storage driver options """
+        return '%%addon %s --overlay' % self.addon.name
+
+    def check_setup(self, storage, ksdata, instClass):
+        """ Nothing to check for overlay """
+        return
+
+    def docker_cmd(self, storage, ksdata, instClass, users):
+        """ Return the docker command's storage arguments
+
+        :param storage: Blivet storage object
+        :param ksdata: Kickstart data object
+        :param instClass: Anaconda installclass object
+        :param users: Anaconda users object
+        """
+        return ["--storage-driver", "overlay"]
+
+    def write_configs(self, storage, ksdata, instClass, users):
+        """ Write configuration file(s)
+
+        :param storage: Blivet storage object
+        :param ksdata: Kickstart data object
+        :param instClass: Anaconda installclass object
+        :param users: Anaconda users object
+        """
+        with open(getSysroot()+"/etc/sysconfig/docker-storage", "w") as fp:
+            fp.write('DOCKER_STORAGE_OPTIONS="--storage-driver overlay"\n')
+
+    def options(self, options):
+        """ Modify the docker config file OPTION value
+
+        :param str options: docker config file OPTIONS string
+
+        overlayfs doesn't work with --selinux-enabled, so remove it
+        """
+        log.info("Removing --selinux-enabled from docker OPTIONS for overlay driver")
+        return options.replace("--selinux-enabled", "")
+
 class DockerData(AddonData):
     """Addon data for the docker configuration"""
 
@@ -51,7 +168,10 @@ class DockerData(AddonData):
         log.info("Initializing docker addon")
         # Called very early in anaconda setup
         AddonData.__init__(self, name)
-        self.vgname = "docker"
+
+        # This is set to one of the storage classes in handle_header
+        self.storage = None
+        self.vgname = None
         self.fstype = "xfs"
         self.enabled = False
         self.extra_args = []
@@ -61,7 +181,8 @@ class DockerData(AddonData):
         if not self.enabled:
             return ""
 
-        addon_str = '%%addon %s --vgname="%s" --fstype="%s"' % (self.name, self.vgname, self.fstype)
+        addon_str = self.storage.addon_str
+
         if self.save_args:
             addon_str += " --save-args"
         if self.extra_args:
@@ -82,13 +203,7 @@ class DockerData(AddonData):
         if "docker" not in ksdata.packages.packageList:
             raise KickstartValueError(formatErrorMsg(0, msg=_("%%package section is missing docker")))
 
-        # Check storage to make sure the selected VG has a thinpool and it is named docker-pool?
-        if self.vgname not in (vg.name for vg in storage.vgs):
-            raise KickstartValueError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker is missing VG named %s")) % self.vgname)
-
-        # Make sure the VG has a docker-pool LV
-        if self.vgname+"-docker-pool" not in (lv.name for lv in storage.lvs):
-            raise KickstartValueError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker is missing a LV named docker-pool")))
+        self.storage.check_setup(storage, ksdata, instClass)
 
     def handle_header(self, lineno, args):
         """ Handle the kickstart addon header
@@ -98,24 +213,35 @@ class DockerData(AddonData):
         """
         # This gets called after __init__, very early in the installation.
         op = KSOptionParser()
-        op.add_option("--vgname", required=True,
+        op.add_option("--vgname",
                       help="Name of the VG that contains a thinpool named docker-pool")
-        op.add_option("--fstype", required=True,
-                      help="Type of filesystem to use for docker to use with docker-pool")
+        op.add_option("--fstype",
+                      help="Type of filesystem for docker to use with the docker-pool")
+        op.add_option("--overlay", action="store_true",
+                      help="Use the overlay driver")
         op.add_option("--save-args", action="store_true", default=False,
                       help="Save all extra args to the OPTIONS variable in /etc/sysconfig/docker")
         (opts, extra) = op.parse_args(args=args, lineno=lineno)
 
-        fmt = blivet.formats.getFormat(opts.fstype)
-        if not fmt or fmt.type is None:
+        if (opts.overlay and opts.vgname) or not (opts.overlay or opts.vgname):
             raise KickstartValueError(formatErrorMsg(lineno,
-                                                     msg=_("%%addon com_redhat_docker fstype of %s is invalid.")) % opts.fstype)
+                                                     msg=_("%%addon com_redhat_docker must choose --overlay OR --vgname")))
 
-        self.vgname = opts.vgname
-        self.fstype = opts.fstype
         self.enabled = True
         self.extra_args = extra
         self.save_args = opts.save_args
+
+        if opts.overlay:
+            self.storage = OverlayStorage(self)
+        elif opts.vgname:
+            fmt = blivet.formats.getFormat(opts.fstype)
+            if not fmt or fmt.type is None:
+                raise KickstartValueError(formatErrorMsg(lineno,
+                                                         msg=_("%%addon com_redhat_docker fstype of %s is invalid.")) % opts.fstype)
+
+            self.vgname = opts.vgname
+            self.fstype = opts.fstype
+            self.storage = LVMStorage(self)
 
     def execute(self, storage, ksdata, instClass, users):
         """ Execute the addon
@@ -132,14 +258,14 @@ class DockerData(AddonData):
 
         # Start up the docker daemon
         log.debug("Starting docker daemon")
-        dm_fs = "dm.fs=%s" % self.fstype
-        pool_name = "dm.thinpooldev=/dev/mapper/%s-docker--pool" % self.vgname
         docker_cmd = ["docker", "daemon"]
         if ksdata.selinux.selinux:
             docker_cmd += ["--selinux-enabled"]
-        docker_cmd += ["--storage-driver", "devicemapper",
-                       "--storage-opt", dm_fs,
-                       "--storage-opt", pool_name, "--ip-forward=false", "--iptables=false"]
+
+        # Add storage specific arguments to the command
+        docker_cmd += self.storage.docker_cmd(storage, ksdata, instClass, users)
+
+        docker_cmd += ["--ip-forward=false", "--iptables=false"]
         docker_cmd += self.extra_args
         docker_proc = startProgram(docker_cmd, stdout=open("/tmp/docker-daemon.log", "w"), reset_lang=True)
 
@@ -152,23 +278,20 @@ class DockerData(AddonData):
         docker_proc.kill()
 
         log.debug("Writing docker configs")
-        with open(getSysroot()+"/etc/sysconfig/docker-storage", "w") as fp:
-            fp.write('DOCKER_STORAGE_OPTIONS="--storage-driver devicemapper '
-                     '--storage-opt %s --storage-opt %s"\n' % (dm_fs, pool_name))
+        self.storage.write_configs(storage, ksdata, instClass, users)
 
-        with open(getSysroot()+"/etc/sysconfig/docker-storage-setup", "a") as fp:
-            fp.write("VG=%s\n" % self.vgname)
-
-        # Rewrite the OPTIONS entry with the extra args, if requested.
-        if self.extra_args and self.save_args:
-            try:
-                docker_cfg = SimpleConfigFile(getSysroot()+"/etc/sysconfig/docker")
-                docker_cfg.read()
-                options = docker_cfg.get("OPTIONS")+" " + " ".join(self.extra_args)
-                docker_cfg.set(("OPTIONS", options))
-                docker_cfg.write()
-            except IOError as e:
-                log.error("Error updating OPTIONS in /etc/sysconfig/docker: %s", e)
+        # Rewrite the OPTIONS entry with the extra args and/or storage specific changes
+        try:
+            docker_cfg = SimpleConfigFile(getSysroot()+"/etc/sysconfig/docker")
+            docker_cfg.read()
+            options = self.storage.options(docker_cfg.get("OPTIONS"))
+            if self.save_args:
+                log.info("Adding extra args to docker OPTIONS")
+                options += " " + " ".join(self.extra_args)
+            docker_cfg.set(("OPTIONS", options))
+            docker_cfg.write()
+        except IOError as e:
+            log.error("Error updating OPTIONS in /etc/sysconfig/docker: %s", e)
 
         # Copy the log files to the system
         dstdir = "/var/log/anaconda/"

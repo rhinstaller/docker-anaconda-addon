@@ -22,7 +22,12 @@ should stop any running containers before the end of the section.
 Storage
 ~~~~~~~
 
-The kickstart needs to setup a LVM thin-pool named 'docker-pool', the VG used
+There are 2 options for storage, LVM thin-pool and OverlayFS. OverlayFS is
+simpler, using the host filesystem from ``/var/lib/docker/`` but it doesn't
+support selinux inside the containers. Pass ``--overlay`` to the addon to
+enable it.
+
+The other option is a LVM thin-pool named 'docker-pool', the VG used
 can be anything, but the VG name needs to be passed to the addon with the
 ``--vgname`` argument. The storage setup will be verified and then the docker
 daemon will be started.
@@ -36,11 +41,17 @@ eg.::
 Addon Section
 ~~~~~~~~~~~~~
 
-The addon command takes 2 required arguments: ``--vgname=VGNAME`` to specify
-the name of the VG containing a LV thin-pool named docker-pool. And
+The addon command arguments depend on whether you are using OverlayFS or LVM.
+OverlayFS is simply ``--overlay``, which will also remove ``--selinux-enabled``
+from the ``/etc/sysconfig/docker`` OPTIONS variable if it is present because
+the overlay doesn't support selinux inside the containers.
+
+When using LVM it requires ``--vgname=VGNAME`` to specify the name of the VG
+containing a LV thin-pool named docker-pool. Optionally you can add
 ``--fstype=FSNAME`` to specify the filesystem type to use with the pool. eg.
-xfs, ext4. You can pass any other arguments to the docker daemon command by adding them to the end
-of the addon command, after ``--``, like this::
+xfs, ext4. The default is xfs. You can pass any other arguments to the docker
+daemon command by adding them to the end of the addon command, after ``--``,
+like this::
 
     %addon com_redhat_docker --vgname=docker --fstype=xfs -- --add-registry docker.foo.bar
 
