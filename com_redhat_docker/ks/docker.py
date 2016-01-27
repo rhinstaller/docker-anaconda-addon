@@ -199,6 +199,8 @@ class DockerData(AddonData):
         :param instClass: Anaconda installclass object
         """
         # This gets called after entering progress hub, just before installation and device partitioning.
+        if not self.enabled:
+            return
 
         if "docker" not in ksdata.packages.packageList:
             raise KickstartValueError(formatErrorMsg(0, msg=_("%%package section is missing docker")))
@@ -251,6 +253,9 @@ class DockerData(AddonData):
         :param instClass: Anaconda installclass object
         :param users: Anaconda users object
         """
+        if not self.enabled:
+            return
+
         log.info("Executing docker addon")
         # This gets called after installation, before initramfs regeneration and kickstart %post scripts.
         execWithRedirect("mount", ["-o", "bind", getSysroot()+"/var/lib/docker", "/var/lib/docker"])
