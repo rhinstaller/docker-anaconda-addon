@@ -22,10 +22,20 @@ should stop any running containers before the end of the section.
 Storage
 ~~~~~~~
 
-There are 2 options for storage, LVM thin-pool and OverlayFS. OverlayFS is
-simpler, using the host filesystem from ``/var/lib/docker/`` but it doesn't
+There are 3 options for storage, LVM thin-pool, BTRFS, and OverlayFS. OverlayFS
+is simpler, using the host filesystem from ``/var/lib/docker/`` but it doesn't
 support selinux inside the containers. Pass ``--overlay`` to the addon to
 enable it.
+
+BTRFS requires that ``/var/lib/docker/`` or one of its parents are on a BTRFS
+volume, and it supports SELinux inside the containers. Pass ``--btrfs`` to the
+addon to enable it.
+
+eq::
+
+    part btrfs.10 --fstype btrfs --size=10000
+    btrfs none --label=docker-btrfs btrfs.10
+    btrfs /var/lib/docker --subvol --name=docker docker-btrfs
 
 The other option is a LVM thin-pool named 'docker-pool', the VG used
 can be anything, but the VG name needs to be passed to the addon with the
@@ -41,10 +51,13 @@ eg.::
 Addon Section
 ~~~~~~~~~~~~~
 
-The addon command arguments depend on whether you are using OverlayFS or LVM.
+The addon command arguments depend on which storage driver you are using.
 OverlayFS is simply ``--overlay``, which will also remove ``--selinux-enabled``
 from the ``/etc/sysconfig/docker`` OPTIONS variable if it is present because
 the overlay doesn't support selinux inside the containers.
+
+BTRFS is just ``--btrfs``, and the kickstart needs to make sure
+``/var/lib/docker/`` or one of its parents is on a BTRFS volume.
 
 When using LVM it requires ``--vgname=VGNAME`` to specify the name of the VG
 containing a LV thin-pool named docker-pool. Optionally you can add
