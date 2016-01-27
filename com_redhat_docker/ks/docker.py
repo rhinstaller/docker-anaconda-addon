@@ -24,6 +24,7 @@ Docker Anaconda Kickstart Addon
 import os
 import shutil
 import blivet.formats
+from blivet.devices import BTRFSDevice
 
 from pyanaconda.addons import AddonData
 from pyanaconda.iutil import execWithRedirect, getSysroot
@@ -160,6 +161,55 @@ class OverlayStorage(object):
         log.info("Removing --selinux-enabled from docker OPTIONS for overlay driver")
         return options.replace("--selinux-enabled", "")
 
+class BTRFSStorage(object):
+    def __init__(self, addon):
+        self.addon = addon
+
+    @property
+    def addon_str(self):
+        """ Return the addon string and storage driver options """
+        return '%%addon %s --btrfs' % self.addon.name
+
+    def check_setup(self, storage, ksdata, instClass):
+        """ Check to make sure /var/lib/docker is on a BTRFS filesystem"""
+        for path in ["/var/lib/docker", "/var/lib", "/var", "/"]:
+            device = storage.mountpoints.get(path)
+            if isinstance(device, BTRFSDevice):
+                log.debug("com_redhat_docker found BTRFS at %s", path)
+                return
+
+        raise KickstartValueError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker /var/lib/docker is not on a BTRFS volume")))
+
+    def docker_cmd(self, storage, ksdata, instClass, users):
+        """ Return the docker command's storage arguments
+
+        :param storage: Blivet storage object
+        :param ksdata: Kickstart data object
+        :param instClass: Anaconda installclass object
+        :param users: Anaconda users object
+        """
+        return ["--storage-driver", "btrfs"]
+
+    def write_configs(self, storage, ksdata, instClass, users):
+        """ Write configuration file(s)
+
+        :param storage: Blivet storage object
+        :param ksdata: Kickstart data object
+        :param instClass: Anaconda installclass object
+        :param users: Anaconda users object
+        """
+        with open(getSysroot()+"/etc/sysconfig/docker-storage", "w") as fp:
+            fp.write('DOCKER_STORAGE_OPTIONS="--storage-driver btrfs"\n')
+
+    def options(self, options):
+        """ Modify the docker config file OPTION value
+
+        :param str options: docker config file OPTIONS string
+
+        BTRFS doesn't modify the OPTIONS
+        """
+        return options
+
 class DockerData(AddonData):
     """Addon data for the docker configuration"""
 
@@ -221,13 +271,15 @@ class DockerData(AddonData):
                       help="Type of filesystem for docker to use with the docker-pool")
         op.add_option("--overlay", action="store_true",
                       help="Use the overlay driver")
+        op.add_option("--btrfs", action="store_true",
+                      help="Use the BTRFS driver")
         op.add_option("--save-args", action="store_true", default=False,
                       help="Save all extra args to the OPTIONS variable in /etc/sysconfig/docker")
         (opts, extra) = op.parse_args(args=args, lineno=lineno)
 
-        if (opts.overlay and opts.vgname) or not (opts.overlay or opts.vgname):
+        if sum(1 for v in [opts.overlay, opts.btrfs, opts.vgname] if bool(v)) != 1:
             raise KickstartValueError(formatErrorMsg(lineno,
-                                                     msg=_("%%addon com_redhat_docker must choose --overlay OR --vgname")))
+                                                     msg=_("%%addon com_redhat_docker must choose one of --overlay, --btrfs, or --vgname")))
 
         self.enabled = True
         self.extra_args = extra
@@ -235,6 +287,8 @@ class DockerData(AddonData):
 
         if opts.overlay:
             self.storage = OverlayStorage(self)
+        elif opts.btrfs:
+            self.storage = BTRFSStorage(self)
         elif opts.vgname:
             fmt = blivet.formats.getFormat(opts.fstype)
             if not fmt or fmt.type is None:
