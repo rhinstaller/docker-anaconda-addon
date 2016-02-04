@@ -42,8 +42,6 @@ log = logging.getLogger("anaconda")
 
 __all__ = ["DockerData"]
 
-# pylint: disable=interruptible-system-call
-
 class LVMStorage(object):
     def __init__(self, addon):
         self.addon = addon
