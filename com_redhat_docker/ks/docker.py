@@ -33,7 +33,7 @@ from pyanaconda.kickstart import AnacondaKSScript
 from pyanaconda.simpleconfig import SimpleConfigFile
 
 from pykickstart.options import KSOptionParser
-from pykickstart.errors import KickstartValueError, formatErrorMsg
+from pykickstart.errors import KickstartParseError, formatErrorMsg
 
 from com_redhat_docker.i18n import _
 
@@ -75,11 +75,11 @@ class LVMStorage(object):
         If there is an error, raise the appropriate Kickstart error.
         """
         if self.addon.vgname not in (vg.name for vg in storage.vgs):
-            raise KickstartValueError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker is missing VG named %s")) % self.addon.vgname)
+            raise KickstartParseError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker is missing VG named %s")) % self.addon.vgname)
 
         # Make sure the VG has a docker-pool LV
         if self.addon.vgname+"-docker-pool" not in (lv.name for lv in storage.lvs):
-            raise KickstartValueError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker is missing a LV named docker-pool")))
+            raise KickstartParseError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker is missing a LV named docker-pool")))
 
     def docker_cmd(self, storage, ksdata, instClass, users):
         """ Return the docker command's storage arguments
@@ -176,7 +176,7 @@ class BTRFSStorage(object):
                 log.debug("com_redhat_docker found BTRFS at %s", path)
                 return
 
-        raise KickstartValueError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker /var/lib/docker is not on a BTRFS volume")))
+        raise KickstartParseError(formatErrorMsg(0, msg=_("%%addon com_redhat_docker /var/lib/docker is not on a BTRFS volume")))
 
     def docker_cmd(self, storage, ksdata, instClass, users):
         """ Return the docker command's storage arguments
@@ -251,7 +251,7 @@ class DockerData(AddonData):
             return
 
         if "docker" not in ksdata.packages.packageList:
-            raise KickstartValueError(formatErrorMsg(0, msg=_("%%package section is missing docker")))
+            raise KickstartParseError(formatErrorMsg(0, msg=_("%%package section is missing docker")))
 
         self.storage.check_setup(storage, ksdata, instClass)
 
@@ -276,7 +276,7 @@ class DockerData(AddonData):
         (opts, extra) = op.parse_args(args=args, lineno=lineno)
 
         if sum(1 for v in [opts.overlay, opts.btrfs, opts.vgname] if bool(v)) != 1:
-            raise KickstartValueError(formatErrorMsg(lineno,
+            raise KickstartParseError(formatErrorMsg(lineno,
                                                      msg=_("%%addon com_redhat_docker must choose one of --overlay, --btrfs, or --vgname")))
 
         self.enabled = True
@@ -290,7 +290,7 @@ class DockerData(AddonData):
         elif opts.vgname:
             fmt = blivet.formats.getFormat(opts.fstype)
             if not fmt or fmt.type is None:
-                raise KickstartValueError(formatErrorMsg(lineno,
+                raise KickstartParseError(formatErrorMsg(lineno,
                                                          msg=_("%%addon com_redhat_docker fstype of %s is invalid.")) % opts.fstype)
 
             self.vgname = opts.vgname
