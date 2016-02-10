@@ -5,17 +5,17 @@ Summary:   Anaconda kickstart support for Docker
 
 License:   GPLv2+
 Url:       https://github.com/rhinstaller/docker-anaconda-addon
-Source0:   https://github.com/rhinstaller/docker-anaconda-addon/archive/%{version}/docker-anaconda-addon-%{version}.tar.gz
+# Source tar.gz can be rebuilt from github repo by running:
+# make po-pull
+# make scratch
+Source0:   docker-anaconda-addon-%{version}.tar.gz
 
 BuildArch: noarch
 
 BuildRequires: python3-devel
-BuildRequires: python3-pylint
 BuildRequires: gettext
 
 Requires: anaconda-core >= 24.0
-Requires: python3-polib
-Requires: python3-pylint
 Requires: docker
 Requires: docker-selinux
 Requires: docker-utils
@@ -31,8 +31,9 @@ the newly installed system during the installation process.
 
 %install
 %make_install
+%find_lang %{name}
 
-%files
+%files -f %{name}.lang
 %license COPYING
 %doc docs/docker-anaconda-addon.rst
 %doc docs/*ks
