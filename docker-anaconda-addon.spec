@@ -1,5 +1,5 @@
 Name:      docker-anaconda-addon
-Version:   0.1
+Version:   0.2
 Release:   1%{?dist}
 Summary:   Anaconda kickstart support for Docker
 
@@ -40,5 +40,11 @@ the newly installed system during the installation process.
 %{_datadir}/anaconda/addons/com_redhat_docker
 
 %changelog
+* Wed Feb 10 2016 Brian C. Lane <bcl@redhat.com> - 0.2-1
+- Include the po/ files in the tar.gz archive (bcl)
+- Update specfile with packaging corrections and lang handling (bcl)
+- Change KickstartValueError to KickstartParseError (bcl)
+- Remove references to the eintr pocketlint checker (dshea)
+
 * Tue Jan 19 2016 Brian C. Lane <bcl@redhat.com> 0.1-1
 - Initial creation of docker-anaconda-addon
