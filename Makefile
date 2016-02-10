@@ -24,14 +24,24 @@ tag:
 	git tag -s -a -m "Tag as $(VERSION)" -f $(VERSION)
 	@echo "Tagged as $(VERSION)"
 
-release: check tag
+release: po-pull check tag
 	git archive --format=tar --prefix=$(PKGNAME)-$(VERSION)/ $(VERSION) > $(PKGNAME)-$(VERSION).tar
+	mkdir $(PKGNAME)-$(VERSION)
+	cp -r po $(PKGNAME)-$(VERSION)
+	tar -rf $(PKGNAME)-$(VERSION).tar $(PKGNAME)-$(VERSION)
 	gzip -9 $(PKGNAME)-$(VERSION).tar
+	rm -rf $(PKGNAME)-$(VERSION)
+	git checkout -- po/$(PKGNAME).pot
 	@echo "The archive is in $(PKGNAME)-$(VERSION).tar.gz"
 
-scratch: check
+scratch: po-pull check
 	git archive --format=tar --prefix=$(PKGNAME)-$(VERSION)/ HEAD > $(PKGNAME)-$(VERSION).tar
+	mkdir $(PKGNAME)-$(VERSION)
+	cp -r po $(PKGNAME)-$(VERSION)
+	tar -rf $(PKGNAME)-$(VERSION).tar $(PKGNAME)-$(VERSION)
 	gzip -9 $(PKGNAME)-$(VERSION).tar
+	rm -rf $(PKGNAME)-$(VERSION)
+	git checkout -- po/$(PKGNAME).pot
 	@echo "The archive is in $(PKGNAME)-$(VERSION).tar.gz"
 
 rpmlog:
