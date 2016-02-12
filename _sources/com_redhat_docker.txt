@@ -1,0 +1,29 @@
+com_redhat_docker package
+=========================
+
+Subpackages
+-----------
+
+.. toctree::
+
+    com_redhat_docker.ks
+
+Submodules
+----------
+
+com_redhat_docker.i18n module
+-----------------------------
+
+.. automodule:: com_redhat_docker.i18n
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: com_redhat_docker
+    :members:
+    :undoc-members:
+    :show-inheritance:

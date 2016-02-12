@@ -1,0 +1,315 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Docker Anaconda addon &mdash; Docker Anaconda Addon 0.2 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="Docker Anaconda Addon 0.2 documentation" href="index.html"/>
+        <link rel="next" title="com_redhat_docker" href="modules.html"/>
+        <link rel="prev" title="Docker Anaconda Addon Documentation" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Docker Anaconda Addon
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="">Docker Anaconda addon</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-kickstart">The Kickstart</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#storage">Storage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#addon-section">Addon Section</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">com_redhat_docker</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">Docker Anaconda Addon</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Docker Anaconda addon</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/docker-anaconda-addon.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="docker-anaconda-addon">
+<h1>Docker Anaconda addon<a class="headerlink" href="#docker-anaconda-addon" title="Permalink to this headline">¶</a></h1>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Authors:</th><td class="field-body">Brian C. Lane &lt;<a class="reference external" href="mailto:bcl&#37;&#52;&#48;redhat&#46;com">bcl<span>&#64;</span>redhat<span>&#46;</span>com</a>&gt;</td>
+</tr>
+</tbody>
+</table>
+<p>This addon adds a kickstart %addon section named <code class="docutils literal"><span class="pre">com_redhat_docker</span></code> to
+Anaconda that allows the user to run docker on their newly installed system
+before rebooting.  There is no GUI or TUI interface for this, everything is
+done via the kickstart.</p>
+<p>In order to use this addon you need an Anaconda boot.iso that has been built with
+the addon and a kickstart with the <code class="docutils literal"><span class="pre">%addon</span> <span class="pre">com_redhat_docker</span></code> section.</p>
+<div class="section" id="the-kickstart">
+<h2>The Kickstart<a class="headerlink" href="#the-kickstart" title="Permalink to this headline">¶</a></h2>
+<p>The kickstart needs to setup the storage, include docker in the installation,
+and run whatever docker commands are needed to install and configure images. It
+should stop any running containers before the end of the section.</p>
+<div class="section" id="storage">
+<h3>Storage<a class="headerlink" href="#storage" title="Permalink to this headline">¶</a></h3>
+<p>There are 3 options for storage, LVM thin-pool, BTRFS, and OverlayFS. OverlayFS
+is simpler, using the host filesystem from <code class="docutils literal"><span class="pre">/var/lib/docker/</span></code> but it doesn&#8217;t
+support selinux inside the containers. Pass <code class="docutils literal"><span class="pre">--overlay</span></code> to the addon to
+enable it.</p>
+<p>BTRFS requires that <code class="docutils literal"><span class="pre">/var/lib/docker/</span></code> or one of its parents are on a BTRFS
+volume, and it supports SELinux inside the containers. Pass <code class="docutils literal"><span class="pre">--btrfs</span></code> to the
+addon to enable it.</p>
+<p>eq:</p>
+<div class="highlight-python"><div class="highlight"><pre>part btrfs.10 --fstype btrfs --size=10000
+btrfs none --label=docker-btrfs btrfs.10
+btrfs /var/lib/docker --subvol --name=docker docker-btrfs
+</pre></div>
+</div>
+<p>The other option is a LVM thin-pool named &#8216;docker-pool&#8217;, the VG used
+can be anything, but the VG name needs to be passed to the addon with the
+<code class="docutils literal"><span class="pre">--vgname</span></code> argument. The storage setup will be verified and then the docker
+daemon will be started.</p>
+<p>eg.:</p>
+<div class="highlight-python"><div class="highlight"><pre>part pv.2 --fstype=lvmpv --size=1 --grow
+volgroup docker pv.2
+logvol none --name=docker-pool --vgname=docker --size=8000 --thinpool
+</pre></div>
+</div>
+</div>
+<div class="section" id="addon-section">
+<h3>Addon Section<a class="headerlink" href="#addon-section" title="Permalink to this headline">¶</a></h3>
+<p>The addon command arguments depend on which storage driver you are using.
+OverlayFS is simply <code class="docutils literal"><span class="pre">--overlay</span></code>, which will also remove <code class="docutils literal"><span class="pre">--selinux-enabled</span></code>
+from the <code class="docutils literal"><span class="pre">/etc/sysconfig/docker</span></code> OPTIONS variable if it is present because
+the overlay doesn&#8217;t support selinux inside the containers.</p>
+<p>BTRFS is just <code class="docutils literal"><span class="pre">--btrfs</span></code>, and the kickstart needs to make sure
+<code class="docutils literal"><span class="pre">/var/lib/docker/</span></code> or one of its parents is on a BTRFS volume.</p>
+<p>When using LVM it requires <code class="docutils literal"><span class="pre">--vgname=VGNAME</span></code> to specify the name of the VG
+containing a LV thin-pool named docker-pool. Optionally you can add
+<code class="docutils literal"><span class="pre">--fstype=FSNAME</span></code> to specify the filesystem type to use with the pool. eg.
+xfs, ext4. The default is xfs. You can pass any other arguments to the docker
+daemon command by adding them to the end of the addon command, after <code class="docutils literal"><span class="pre">--</span></code>,
+like this:</p>
+<div class="highlight-python"><div class="highlight"><pre>%addon com_redhat_docker --vgname=docker --fstype=xfs -- --add-registry docker.foo.bar
+</pre></div>
+</div>
+<p>Commands inside the addon section are run as a bash shell in the installer
+environment (just like a <code class="docutils literal"><span class="pre">%post</span> <span class="pre">--nochroot</span></code>) so that it is flexible enough to
+accomplish whatever other setup is needed. The new system is mounted at
+/mnt/sysimage in this environment.</p>
+<p>Logs are written to docker-daemon.log and docker-addon.log in /tmp/, and are
+copied into /var/log/anaconda/ on the installed system.</p>
+<p>eg.:</p>
+<div class="highlight-python"><div class="highlight"><pre>%addon com_redhat_docker --vgname=docker --fstype=xfs
+docker pull hello-world
+docker pull busybox
+docker images
+%end
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The extra arguments are normally only used during installation. If they should
+be used after reboot add <code class="docutils literal"><span class="pre">--save-args</span></code> before the <code class="docutils literal"><span class="pre">--</span></code>.</p>
+</div>
+</div>
+<div class="section" id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<p>You can add support to an existing kickstart by doing something similar to this:</p>
+<div class="highlight-python"><div class="highlight"><pre>part pv.2 --fstype=lvmpv --size=1 --grow
+volgroup docker pv.2
+logvol none --name=docker-pool --vgname=docker --size=8000 --thinpool
+
+services --enable=docker
+
+%packages
+docker
+%end
+
+%addon com_redhat_docker --vgname=docker --fstype=xfs
+docker pull hello-world
+docker pull busybox
+docker images
+%end
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="modules.html" class="btn btn-neutral float-right" title="com_redhat_docker" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="Docker Anaconda Addon Documentation" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Red Hat, Inc..
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.2',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
