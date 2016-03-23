@@ -288,7 +288,7 @@ class DockerData(AddonData):
         elif opts.btrfs:
             self.storage = BTRFSStorage(self)
         elif opts.vgname:
-            fmt = blivet.formats.getFormat(opts.fstype)
+            fmt = blivet.formats.get_format(opts.fstype)
             if not fmt or fmt.type is None:
                 raise KickstartParseError(formatErrorMsg(lineno,
                                                          msg=_("%%addon com_redhat_docker fstype of %s is invalid.")) % opts.fstype)
