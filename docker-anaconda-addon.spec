@@ -15,7 +15,7 @@ BuildArch: noarch
 BuildRequires: python3-devel
 BuildRequires: gettext
 
-Requires: anaconda-core >= 24.0
+Requires: anaconda-core >= 25.5
 Requires: docker
 Requires: docker-selinux
 Requires: docker-utils
