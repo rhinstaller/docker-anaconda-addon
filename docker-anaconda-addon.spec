@@ -1,5 +1,5 @@
 Name:      docker-anaconda-addon
-Version:   0.2
+Version:   0.3
 Release:   1%{?dist}
 Summary:   Anaconda kickstart support for Docker
 
@@ -40,6 +40,11 @@ the newly installed system during the installation process.
 %{_datadir}/anaconda/addons/com_redhat_docker
 
 %changelog
+* Mon Apr 04 2016 Brian C. Lane <bcl@redhat.com> - 0.3-1
+- Bump anaconda minimum version to 25.5 for Blivet API changes (bcl)
+- Adapt to blivet-2.0 API. (dlehman)
+- Add link to documentation on github.io (bcl)
+
 * Wed Feb 10 2016 Brian C. Lane <bcl@redhat.com> - 0.2-1
 - Include the po/ files in the tar.gz archive (bcl)
 - Update specfile with packaging corrections and lang handling (bcl)
