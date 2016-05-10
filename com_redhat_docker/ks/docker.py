@@ -239,12 +239,14 @@ class DockerData(AddonData):
 
         return addon_str
 
-    def setup(self, storage, ksdata, instClass):
+    def setup(self, storage, ksdata, instClass, payload):
         """ Setup the addon
 
         :param storage: Blivet storage object
         :param ksdata: Kickstart data object
         :param instClass: Anaconda installclass object
+        :param payload: object managing packages and environment groups
+                        for the installation
         """
         # This gets called after entering progress hub, just before installation and device partitioning.
         if not self.enabled:
@@ -297,13 +299,15 @@ class DockerData(AddonData):
             self.fstype = opts.fstype
             self.storage = LVMStorage(self)
 
-    def execute(self, storage, ksdata, instClass, users):
+    def execute(self, storage, ksdata, instClass, users, payload):
         """ Execute the addon
 
         :param storage: Blivet storage object
         :param ksdata: Kickstart data object
         :param instClass: Anaconda installclass object
         :param users: Anaconda users object
+        :param payload: object managing packages and environment groups
+                        for the installation
         """
         if not self.enabled:
             return
