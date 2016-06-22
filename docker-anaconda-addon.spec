@@ -1,6 +1,6 @@
 Name:      docker-anaconda-addon
 Version:   0.3
-Release:   1%{?dist}
+Release:   2%{?dist}
 Summary:   Anaconda kickstart support for Docker
 
 License:   GPLv2+
@@ -18,7 +18,6 @@ BuildRequires: gettext
 Requires: anaconda-core >= 25.5
 Requires: docker
 Requires: docker-selinux
-Requires: docker-utils
 
 %description
 Add a kickstart addon section to Anaconda, com_redhat_docker, to run Docker on
@@ -40,6 +39,9 @@ the newly installed system during the installation process.
 %{_datadir}/anaconda/addons/com_redhat_docker
 
 %changelog
+* Wed Jun 22 2016 Brian C. Lane <bcl@redhat.com> - 0.3-2
+- Drop docker-utils requirement, the subpackage has been removed from docker
+
 * Mon Apr 04 2016 Brian C. Lane <bcl@redhat.com> - 0.3-1
 - Bump anaconda minimum version to 25.5 for Blivet API changes (bcl)
 - Adapt to blivet-2.0 API. (dlehman)
