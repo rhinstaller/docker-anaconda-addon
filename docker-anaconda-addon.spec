@@ -18,7 +18,6 @@ BuildRequires: gettext
 Requires: anaconda-core >= 25.5
 Requires: docker
 Requires: docker-selinux
-Requires: docker-utils
 
 %description
 Add a kickstart addon section to Anaconda, com_redhat_docker, to run Docker on
