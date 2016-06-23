@@ -2,13 +2,14 @@ PKGNAME=docker-anaconda-addon
 ADDONNAME=com_redhat_docker
 VERSION=$(shell awk '/Version:/ { print $$2 }' $(PKGNAME).spec)
 ADDONDIR=/usr/share/anaconda/addons/
+PYTHONPATH=.
 
 ZANATA_PULL_ARGS = --transdir po/
 ZANATA_PUSH_ARGS = --srcdir po/ --push-type source --force
 
 check:
 	@echo "*** Running pylint to verify source ***"
-	PYTHONPATH=. tests/pylint/runpylint.py
+	tests/pylint/runpylint.py
 
 clean:
 	-rm pylint-log updates.img
