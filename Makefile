@@ -5,10 +5,11 @@ ADDONDIR=/usr/share/anaconda/addons/
 
 ZANATA_PULL_ARGS = --transdir po/
 ZANATA_PUSH_ARGS = --srcdir po/ --push-type source --force
+PYTHONPATH ?= .
 
 check:
 	@echo "*** Running pylint to verify source ***"
-	PYTHONPATH=. tests/pylint/runpylint.py
+	tests/pylint/runpylint.py
 
 clean:
 	-rm pylint-log updates.img
@@ -58,7 +59,7 @@ bumpver: po-pull
 	sed -i "s/Version:   $(VERSION)/Version:   $$NEWVERSION/" ${PKGNAME}.spec
 
 ci:
-	PYTHONPATH=. tests/pylint/runpylint.py
+	tests/pylint/runpylint.py
 
 potfile:
 	$(MAKE) DESTDIR=$(DESTDIR) -C po potfile
