@@ -1,5 +1,5 @@
 Name:      docker-anaconda-addon
-Version:   0.3
+Version:   0.4
 Release:   2%{?dist}
 Summary:   Anaconda kickstart support for Docker
 
@@ -39,6 +39,11 @@ the newly installed system during the installation process.
 %{_datadir}/anaconda/addons/com_redhat_docker
 
 %changelog
+* Fri Jun 24 2016 Brian C. Lane <bcl@redhat.com> - 0.4-1
+- Make it easier to override PYTHONPATH (bcl)
+- Drop docker-utils requirement, the subpackage has been removed from docker (bcl)
+- Add support for new Anaconda addon methods (#1288636) (jkonecny)
+
 * Wed Jun 22 2016 Brian C. Lane <bcl@redhat.com> - 0.3-2
 - Drop docker-utils requirement, the subpackage has been removed from docker
 
