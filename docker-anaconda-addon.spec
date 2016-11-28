@@ -1,3 +1,6 @@
+# Disable debug package -- Exclusivearch is used to skip building on ppc64
+%global debug_package %{nil}
+
 Name:      docker-anaconda-addon
 Version:   0.4
 Release:   2%{?dist}
@@ -10,7 +13,11 @@ Url:       https://github.com/rhinstaller/docker-anaconda-addon
 # make scratch
 Source0:   docker-anaconda-addon-%{version}.tar.gz
 
-BuildArch: noarch
+# Docker isn't available on all of the Fedora primary arches
+# See rhbz#1315903
+# The list of arches comes from docker.spec
+#BuildArch: noarch
+ExclusiveArch: %{ix86} x86_64 %{arm} aarch64 ppc64le s390x %{mips}
 
 BuildRequires: python3-devel
 BuildRequires: gettext
