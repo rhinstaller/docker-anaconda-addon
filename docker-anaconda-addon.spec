@@ -3,7 +3,7 @@
 
 Name:      docker-anaconda-addon
 Version:   0.4
-Release:   2%{?dist}
+Release:   3%{?dist}
 Summary:   Anaconda kickstart support for Docker
 
 License:   GPLv2+
@@ -46,6 +46,9 @@ the newly installed system during the installation process.
 %{_datadir}/anaconda/addons/com_redhat_docker
 
 %changelog
+* Tue Dec 06 2016 Brian C. Lane <bcl@redhat.com> - 0.4-3
+- Only build on arches supported by Docker (bcl)
+
 * Fri Jun 24 2016 Brian C. Lane <bcl@redhat.com> - 0.4-1
 - Make it easier to override PYTHONPATH (bcl)
 - Drop docker-utils requirement, the subpackage has been removed from docker (bcl)
